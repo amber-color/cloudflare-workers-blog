@@ -7,7 +7,7 @@
     
     <link href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/journal/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
     
     <style>
         body { font-family: 'News Cycle', Georgia, serif; background-color: #faf9f6; }
@@ -19,7 +19,7 @@
         .form-label { font-weight: 600; }
         .btn-primary { background: #eb6864; border-color: #eb6864; }
         .btn-primary:hover { background: #d4524e; border-color: #d4524e; }
-        .EasyMDEContainer .CodeMirror { min-height: 300px; }
+        .toastui-editor-defaultUI { border-radius: 0.375rem; }
     </style>
     
     {{codeBeforHead}}
@@ -95,15 +95,10 @@
                                 </div>
                             </div>
                             <div class="mb-4">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label for="content" class="form-label mb-0">Content *</label>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="insert-file-btn" title="Upload a file and insert link">
-                                        <i class="bi bi-paperclip me-1"></i>Insert File
-                                    </button>
-                                </div>
-                                <input type="file" id="insert-file-input" accept="*/*" style="display:none">
-                                <div id="insert-file-status" class="form-text mb-1"></div>
-                                <textarea id="content"></textarea>
+                                <label class="form-label">Content *</label>
+                                <input type="file" id="editor-img-input" accept="image/*" style="display:none">
+                                <input type="file" id="editor-file-input" accept="*/*" style="display:none">
+                                <div id="content-editor"></div>
                             </div>
                             <div class="d-flex gap-2 justify-content-end pt-3 border-top">
                                 <button type="button" class="btn btn-secondary" onclick="window.history.back()"><i class="bi bi-x-circle me-1"></i>Cancel</button>
@@ -117,9 +112,32 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
     <script>
-        let easyMDE = new EasyMDE({ element: document.getElementById('content'), spellChecker: false, status: false, toolbar: ['bold', 'italic', 'heading', '|', 'quote', 'unordered-list', 'ordered-list', '|', 'link', 'image', '|', 'preview', 'side-by-side', 'fullscreen', '|', 'guide'] });
+        function makeToolbarBtn(emoji, tooltip, inputId) {
+            const btn = document.createElement('button');
+            btn.type = 'button'; btn.title = tooltip;
+            btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;line-height:1;';
+            btn.textContent = emoji;
+            btn.addEventListener('mousedown', (e) => { e.preventDefault(); document.getElementById(inputId).click(); });
+            return btn;
+        }
+        let editor = new toastui.Editor({
+            el: document.getElementById('content-editor'),
+            initialEditType: 'wysiwyg',
+            previewStyle: 'tab',
+            height: '500px',
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task', 'indent', 'outdent'],
+                ['table', 'link'],
+                [
+                    { name: 'imageUpload', el: makeToolbarBtn('🖼', 'Upload Image', 'editor-img-input') },
+                    { name: 'fileAttach', el: makeToolbarBtn('📎', 'Attach File', 'editor-file-input') },
+                ],
+            ],
+        });
         let isEditing = false, currentPermalink = '';
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -136,7 +154,7 @@
             document.getElementById('label').value = article.label;
             document.getElementById('createDate').value = new Date(article.createDate).toISOString().slice(0, 16);
             if (article.status) document.getElementById('status').value = article.status;
-            easyMDE.value(article.content);
+            editor.setMarkdown(article.content || '');
         }
 
         document.getElementById('article-form').addEventListener('submit', async (e) => {
@@ -150,7 +168,7 @@
                 img: document.getElementById('img').value,
                 label: document.getElementById('label').value,
                 createDate: document.getElementById('createDate').value,
-                content: easyMDE.value(),
+                content: editor.getMarkdown(),
                 status: document.getElementById('status').value
             };
 
@@ -187,57 +205,38 @@
         });
 
         // ── File Upload ──────────────────────────────────────────────
-        async function uploadFile(file, statusEl) {
-            if (file.size > 10 * 1024 * 1024) {
-                statusEl.textContent = 'File too large (max 10 MB)';
-                statusEl.className = 'form-text text-danger';
-                return null;
-            }
-            statusEl.textContent = 'Uploading...';
-            statusEl.className = 'form-text text-muted';
+        async function doUpload(file) {
+            if (file.size > 10 * 1024 * 1024) throw new Error('File too large (max 10 MB)');
             const fd = new FormData();
             fd.append('file', file);
-            try {
-                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
-                const result = await resp.json();
-                if (!resp.ok) throw new Error(result.error || resp.statusText);
-                statusEl.textContent = 'Uploaded: ' + result.filename;
-                statusEl.className = 'form-text text-success';
-                return result;
-            } catch (e) {
-                statusEl.textContent = 'Upload failed: ' + e.message;
-                statusEl.className = 'form-text text-danger';
-                return null;
-            }
+            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const result = await resp.json();
+            if (!resp.ok) throw new Error(result.error || resp.statusText);
+            return result;
         }
 
-        document.getElementById('upload-img-btn').addEventListener('click', () => {
-            document.getElementById('upload-img-input').click();
-        });
+        document.getElementById('upload-img-btn').addEventListener('click', () => document.getElementById('upload-img-input').click());
 
         document.getElementById('upload-img-input').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const result = await uploadFile(file, document.getElementById('upload-img-status'));
-            if (result) document.getElementById('img').value = result.url;
+            const file = e.target.files[0]; if (!file) return;
+            const s = document.getElementById('upload-img-status');
+            s.textContent = 'Uploading...';
+            try { const r = await doUpload(file); document.getElementById('img').value = r.url; s.textContent = 'Uploaded: ' + r.filename; s.className = 'form-text text-success'; }
+            catch (err) { s.textContent = err.message; s.className = 'form-text text-danger'; }
             e.target.value = '';
         });
 
-        document.getElementById('insert-file-btn').addEventListener('click', () => {
-            document.getElementById('insert-file-input').click();
+        document.getElementById('editor-img-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            try { const r = await doUpload(file); editor.exec('addImage', { imageUrl: r.url, altText: r.filename }); }
+            catch (err) { showAlert(err.message, 'danger'); }
+            e.target.value = '';
         });
 
-        document.getElementById('insert-file-input').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const result = await uploadFile(file, document.getElementById('insert-file-status'));
-            if (result) {
-                const isImage = result.contentType.startsWith('image/');
-                const md = isImage ? `![${result.filename}](${result.url})` : `[${result.filename}](${result.url})`;
-                const cm = easyMDE.codemirror;
-                cm.replaceRange(md, cm.getCursor());
-                cm.focus();
-            }
+        document.getElementById('editor-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            try { const r = await doUpload(file); editor.insertText(`[${r.filename}](${r.url})`); }
+            catch (err) { showAlert(err.message, 'danger'); }
             e.target.value = '';
         });
     </script>

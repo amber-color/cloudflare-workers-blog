@@ -11,8 +11,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- EasyMDE -->
-    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <!-- Toast UI Editor -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
     
     <style>
         /* CSS Variables for Light/Dark Themes */
@@ -193,45 +193,15 @@
             font-weight: 500;
         }
         
-        /* EasyMDE Editor Styling */
+        /* Toast UI Editor Styling */
         .editor-wrapper {
             border-radius: var(--border-radius);
             overflow: hidden;
             box-shadow: var(--shadow-sm);
         }
-        
-        .EasyMDEContainer .CodeMirror {
-            background: var(--editor-bg);
-            color: var(--text-primary);
+        .toastui-editor-defaultUI {
             border: 1px solid var(--card-border);
-            border-top: none;
-            border-radius: 0 0 var(--border-radius) var(--border-radius);
-            min-height: 350px;
-        }
-        
-        .EasyMDEContainer .editor-toolbar {
-            background: var(--editor-toolbar);
-            border: 1px solid var(--card-border);
-            border-radius: var(--border-radius) var(--border-radius) 0 0;
-            padding: 0.5rem;
-        }
-        
-        .EasyMDEContainer .editor-toolbar button {
-            border-radius: 8px;
-            color: var(--text-primary) !important;
-        }
-        
-        .EasyMDEContainer .editor-toolbar button:hover {
-            background: rgba(99, 102, 241, 0.1);
-        }
-        
-        .EasyMDEContainer .editor-toolbar button.active {
-            background: var(--primary-color);
-            color: white !important;
-        }
-        
-        [data-bs-theme="dark"] .EasyMDEContainer .CodeMirror-cursor {
-            border-color: white;
+            border-radius: var(--border-radius);
         }
         
         @media (max-width: 768px) {
@@ -373,18 +343,13 @@
                             </div>
                             
                             <div class="mb-4">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label for="content" class="form-label mb-0">
-                                        <i class="fa-solid fa-file-lines me-1"></i>Content *
-                                    </label>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="insert-file-btn" title="Upload a file and insert link">
-                                        <i class="fa-solid fa-paperclip me-1"></i>Insert File
-                                    </button>
-                                </div>
-                                <input type="file" id="insert-file-input" accept="*/*" style="display:none">
-                                <div id="insert-file-status" class="form-text mb-1"></div>
+                                <label class="form-label">
+                                    <i class="fa-solid fa-file-lines me-1"></i>Content *
+                                </label>
+                                <input type="file" id="editor-img-input" accept="image/*" style="display:none">
+                                <input type="file" id="editor-file-input" accept="*/*" style="display:none">
                                 <div class="editor-wrapper">
-                                    <textarea id="content"></textarea>
+                                    <div id="content-editor"></div>
                                 </div>
                             </div>
                             
@@ -404,7 +369,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
     <script>
         // Theme Toggle
         function getPreferredTheme() {
@@ -429,23 +394,38 @@
         
         setTheme(getPreferredTheme());
 
-        let easyMDE;
+        let editor;
         let isEditing = false;
         let currentPermalink = '';
 
-        // Initialize EasyMDE
-        easyMDE = new EasyMDE({ 
-            element: document.getElementById('content'),
-            spellChecker: false,
-            status: false,
-            autosave: { enabled: false },
-            toolbar: [
-                'bold', 'italic', 'heading', '|',
-                'quote', 'unordered-list', 'ordered-list', '|',
-                'link', 'image', '|',
-                'preview', 'side-by-side', 'fullscreen', '|',
-                'guide'
-            ]
+        function makeToolbarBtn(emoji, tooltip, inputId) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.title = tooltip;
+            btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;line-height:1;';
+            btn.textContent = emoji;
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                document.getElementById(inputId).click();
+            });
+            return btn;
+        }
+
+        editor = new toastui.Editor({
+            el: document.getElementById('content-editor'),
+            initialEditType: 'wysiwyg',
+            previewStyle: 'tab',
+            height: '500px',
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task', 'indent', 'outdent'],
+                ['table', 'link'],
+                [
+                    { name: 'imageUpload', el: makeToolbarBtn('🖼', 'Upload Image', 'editor-img-input') },
+                    { name: 'fileAttach', el: makeToolbarBtn('📎', 'Attach File', 'editor-file-input') },
+                ],
+            ],
         });
 
         // Check if editing existing article
@@ -477,7 +457,7 @@
                     document.getElementById('status').value = article.status;
                 }
                 
-                easyMDE.value(article.content);
+                editor.setMarkdown(article.content || '');
             } catch (error) {
                 console.error('Error loading article:', error);
                 alert('Error loading article');
@@ -504,7 +484,7 @@
                 img: document.getElementById('img').value,
                 label: document.getElementById('label').value,
                 createDate: document.getElementById('createDate').value,
-                content: easyMDE.value(),
+                content: editor.getMarkdown(),
                 status: document.getElementById('status').value
             };
 
@@ -590,28 +570,14 @@
         });
 
         // ── File Upload ──────────────────────────────────────────────
-        async function uploadFile(file, statusEl) {
-            if (file.size > 10 * 1024 * 1024) {
-                statusEl.textContent = 'File too large (max 10 MB)';
-                statusEl.className = 'form-text text-danger';
-                return null;
-            }
-            statusEl.textContent = 'Uploading...';
-            statusEl.className = 'form-text text-muted';
+        async function doUpload(file) {
+            if (file.size > 10 * 1024 * 1024) throw new Error('File too large (max 10 MB)');
             const fd = new FormData();
             fd.append('file', file);
-            try {
-                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
-                const result = await resp.json();
-                if (!resp.ok) throw new Error(result.error || resp.statusText);
-                statusEl.textContent = 'Uploaded: ' + result.filename;
-                statusEl.className = 'form-text text-success';
-                return result;
-            } catch (e) {
-                statusEl.textContent = 'Upload failed: ' + e.message;
-                statusEl.className = 'form-text text-danger';
-                return null;
-            }
+            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const result = await resp.json();
+            if (!resp.ok) throw new Error(result.error || resp.statusText);
+            return result;
         }
 
         document.getElementById('upload-img-btn').addEventListener('click', () => {
@@ -621,25 +587,40 @@
         document.getElementById('upload-img-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const result = await uploadFile(file, document.getElementById('upload-img-status'));
-            if (result) document.getElementById('img').value = result.url;
+            const statusEl = document.getElementById('upload-img-status');
+            statusEl.textContent = 'Uploading...';
+            try {
+                const result = await doUpload(file);
+                document.getElementById('img').value = result.url;
+                statusEl.textContent = 'Uploaded: ' + result.filename;
+                statusEl.className = 'form-text text-success';
+            } catch (e) {
+                statusEl.textContent = e.message;
+                statusEl.className = 'form-text text-danger';
+            }
             e.target.value = '';
         });
 
-        document.getElementById('insert-file-btn').addEventListener('click', () => {
-            document.getElementById('insert-file-input').click();
-        });
-
-        document.getElementById('insert-file-input').addEventListener('change', async (e) => {
+        document.getElementById('editor-img-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const result = await uploadFile(file, document.getElementById('insert-file-status'));
-            if (result) {
-                const isImage = result.contentType.startsWith('image/');
-                const md = isImage ? `![${result.filename}](${result.url})` : `[${result.filename}](${result.url})`;
-                const cm = easyMDE.codemirror;
-                cm.replaceRange(md, cm.getCursor());
-                cm.focus();
+            try {
+                const result = await doUpload(file);
+                editor.exec('addImage', { imageUrl: result.url, altText: result.filename });
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('editor-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const result = await doUpload(file);
+                editor.insertText(`[${result.filename}](${result.url})`);
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
             }
             e.target.value = '';
         });

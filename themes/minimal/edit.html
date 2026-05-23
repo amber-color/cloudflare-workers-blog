@@ -38,8 +38,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <!-- EasyMDE -->
-    <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+    <!-- Toast UI Editor -->
+    <link rel="stylesheet" href="https://uicdn.toast.com/editor/latest/toastui-editor.min.css">
     
     <style>
         * {
@@ -310,19 +310,12 @@
                 </div>
                 
                 <div class="mb-8">
-                    <div class="flex items-center justify-between mb-3">
-                        <label for="content" class="form-label">
-                            <i class="ri-file-text-line"></i>Content *
-                        </label>
-                        <button type="button" id="insert-file-btn"
-                                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
-                                title="Upload a file and insert link into editor">
-                            <i class="ri-attachment-line"></i> Insert File
-                        </button>
-                    </div>
-                    <input type="file" id="insert-file-input" accept="*/*" style="display:none">
-                    <p id="insert-file-status" class="text-xs mb-2 text-gray-500"></p>
-                    <textarea id="content"></textarea>
+                    <label class="form-label mb-3">
+                        <i class="ri-file-text-line"></i>Content *
+                    </label>
+                    <input type="file" id="editor-img-input" accept="image/*" style="display:none">
+                    <input type="file" id="editor-file-input" accept="*/*" style="display:none">
+                    <div id="content-editor"></div>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100">
@@ -339,27 +332,41 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/latest/toastui-editor-all.min.js"></script>
     <script>
-        let easyMDE;
+        let editor;
         let isEditing = false;
         let currentPermalink = '';
 
-        // Initialize EasyMDE
-        easyMDE = new EasyMDE({ 
-            element: document.getElementById('content'),
-            spellChecker: false,
-            status: false,
-            autosave: {
-                enabled: false
-            },
-            toolbar: [
-                'bold', 'italic', 'heading', '|',
-                'quote', 'unordered-list', 'ordered-list', '|',
-                'link', 'image', '|',
-                'preview', 'side-by-side', 'fullscreen', '|',
-                'guide'
-            ]
+        // Custom toolbar buttons
+        function makeToolbarBtn(emoji, tooltip, inputId) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.title = tooltip;
+            btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;line-height:1;';
+            btn.textContent = emoji;
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                document.getElementById(inputId).click();
+            });
+            return btn;
+        }
+
+        editor = new toastui.Editor({
+            el: document.getElementById('content-editor'),
+            initialEditType: 'wysiwyg',
+            previewStyle: 'tab',
+            height: '500px',
+            toolbarItems: [
+                ['heading', 'bold', 'italic', 'strike'],
+                ['hr', 'quote'],
+                ['ul', 'ol', 'task', 'indent', 'outdent'],
+                ['table', 'link'],
+                [
+                    { name: 'imageUpload', el: makeToolbarBtn('🖼', 'Upload Image', 'editor-img-input') },
+                    { name: 'fileAttach', el: makeToolbarBtn('📎', 'Attach File', 'editor-file-input') },
+                ],
+            ],
         });
 
         // Check if editing existing article
@@ -397,7 +404,7 @@
                     document.getElementById('status').value = article.status;
                 }
                 
-                easyMDE.value(article.content);
+                editor.setMarkdown(article.content || '');
             } catch (error) {
                 console.error('Error loading article:', error);
                 showNotification('Error loading article: ' + error.message, 'error');
@@ -421,7 +428,7 @@
                 img: document.getElementById('img').value,
                 label: document.getElementById('label').value,
                 createDate: document.getElementById('createDate').value,
-                content: easyMDE.value(),
+                content: editor.getMarkdown(),
                 status: document.getElementById('status').value
             };
 
@@ -548,30 +555,17 @@
         }
 
         // ── File Upload ──────────────────────────────────────────────
-        async function uploadFile(file, statusEl) {
-            if (file.size > 10 * 1024 * 1024) {
-                statusEl.textContent = 'File too large (max 10 MB)';
-                statusEl.style.color = '#ef4444';
-                return null;
-            }
-            statusEl.textContent = 'Uploading...';
-            statusEl.style.color = '';
+        async function doUpload(file) {
+            if (file.size > 10 * 1024 * 1024) throw new Error('File too large (max 10 MB)');
             const fd = new FormData();
             fd.append('file', file);
-            try {
-                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
-                const result = await resp.json();
-                if (!resp.ok) throw new Error(result.error || resp.statusText);
-                statusEl.textContent = 'Uploaded: ' + result.filename;
-                statusEl.style.color = '#22c55e';
-                return result;
-            } catch (e) {
-                statusEl.textContent = 'Upload failed: ' + e.message;
-                statusEl.style.color = '#ef4444';
-                return null;
-            }
+            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const result = await resp.json();
+            if (!resp.ok) throw new Error(result.error || resp.statusText);
+            return result;
         }
 
+        // Featured image upload
         document.getElementById('upload-img-btn').addEventListener('click', () => {
             document.getElementById('upload-img-input').click();
         });
@@ -579,25 +573,44 @@
         document.getElementById('upload-img-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const result = await uploadFile(file, document.getElementById('upload-img-status'));
-            if (result) document.getElementById('img').value = result.url;
+            const statusEl = document.getElementById('upload-img-status');
+            statusEl.textContent = 'Uploading...';
+            try {
+                const result = await doUpload(file);
+                document.getElementById('img').value = result.url;
+                statusEl.textContent = 'Uploaded: ' + result.filename;
+                statusEl.style.color = '#22c55e';
+            } catch (e) {
+                statusEl.textContent = e.message;
+                statusEl.style.color = '#ef4444';
+            }
             e.target.value = '';
         });
 
-        document.getElementById('insert-file-btn').addEventListener('click', () => {
-            document.getElementById('insert-file-input').click();
-        });
-
-        document.getElementById('insert-file-input').addEventListener('change', async (e) => {
+        // Editor image upload (toolbar button)
+        document.getElementById('editor-img-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            const result = await uploadFile(file, document.getElementById('insert-file-status'));
-            if (result) {
-                const isImage = result.contentType.startsWith('image/');
-                const md = isImage ? `![${result.filename}](${result.url})` : `[${result.filename}](${result.url})`;
-                const cm = easyMDE.codemirror;
-                cm.replaceRange(md, cm.getCursor());
-                cm.focus();
+            try {
+                const result = await doUpload(file);
+                editor.exec('addImage', { imageUrl: result.url, altText: result.filename });
+                showNotification('Image inserted', 'success');
+            } catch (e) {
+                showNotification(e.message, 'error');
+            }
+            e.target.value = '';
+        });
+
+        // Editor file attachment (toolbar button)
+        document.getElementById('editor-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const result = await doUpload(file);
+                editor.insertText(`[${result.filename}](${result.url})`);
+                showNotification('File inserted', 'success');
+            } catch (e) {
+                showNotification(e.message, 'error');
             }
             e.target.value = '';
         });
