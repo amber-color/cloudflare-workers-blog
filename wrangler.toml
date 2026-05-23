@@ -1,0 +1,8 @@
+name = "cf-blog"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+[[kv_namespaces]]
+binding    = "BLOG_STORE"
+id         = "205d220ff383487f91e1a4cebece3e2e"
+preview_id = "205d220ff383487f91e1a4cebece3e2e"
