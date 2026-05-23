@@ -11,7 +11,7 @@ const OPT = {
     "recentlySize": 6,
     "readMoreLength": 150,
     "cacheTime": 60 * 60 * 24 * 0.5,
-    "themeURL": "https://raw.githubusercontent.com/OshekharO/Cloudflare-Workers-Blog/main/themes/minimal/",
+    "themeURL": "https://raw.githubusercontent.com/amber-color/cloudflare-workers-blog/main/themes/minimal/",
     "html404": ``,
     "codeBeforHead": ``,
     "codeBeforBody": ``,
@@ -700,7 +700,7 @@ export default {
 
         const themeParam = url.searchParams.get('theme');
         if (themeParam) {
-            OPT.themeURL = `https://raw.githubusercontent.com/OshekharO/Cloudflare-Workers-Blog/main/themes/${themeParam}/`;
+            OPT.themeURL = `https://raw.githubusercontent.com/amber-color/cloudflare-workers-blog/main/themes/${themeParam}/`;
         }
 
         // Check authentication for admin routes
