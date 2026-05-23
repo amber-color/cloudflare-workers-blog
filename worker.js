@@ -2,7 +2,7 @@
 
 const OPT = {
     "user": "admin",
-    "password": "amepass",
+    "password": "amepasuwa-do",
     "siteDomain": "blog.oshekher.workers.dev",
     "siteName": "CF Workers Blog",
     "siteDescription": "A Blog Powered By Cloudflare Workers and KV",
