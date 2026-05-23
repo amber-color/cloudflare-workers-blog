@@ -17,7 +17,7 @@ const OPT = {
     "codeBeforBody": ``,
     "commentCode": ``,
     "widgetOther": ``,
-    "copyRight": `Powered by OshekharO`,
+    "copyRight": ``,
     "robots": `User-agent: *\nDisallow: /admin`,
     "draftPrefix": "DRAFT_"
 };
