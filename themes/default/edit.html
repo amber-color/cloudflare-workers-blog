@@ -343,7 +343,14 @@
                                 <label for="img" class="form-label">
                                     <i class="fa-solid fa-image me-1"></i>Featured Image URL
                                 </label>
-                                <input type="url" class="form-control" id="img" placeholder="https://example.com/image.jpg">
+                                <div class="input-group">
+                                    <input type="url" class="form-control" id="img" placeholder="https://example.com/image.jpg">
+                                    <button class="btn btn-outline-secondary" type="button" id="upload-img-btn" title="Upload image">
+                                        <i class="fa-solid fa-upload"></i>
+                                    </button>
+                                </div>
+                                <input type="file" id="upload-img-input" accept="image/*" style="display:none">
+                                <div id="upload-img-status" class="form-text"></div>
                             </div>
                             
                             <div class="row">
@@ -366,9 +373,16 @@
                             </div>
                             
                             <div class="mb-4">
-                                <label for="content" class="form-label">
-                                    <i class="fa-solid fa-file-lines me-1"></i>Content *
-                                </label>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="content" class="form-label mb-0">
+                                        <i class="fa-solid fa-file-lines me-1"></i>Content *
+                                    </label>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="insert-file-btn" title="Upload a file and insert link">
+                                        <i class="fa-solid fa-paperclip me-1"></i>Insert File
+                                    </button>
+                                </div>
+                                <input type="file" id="insert-file-input" accept="*/*" style="display:none">
+                                <div id="insert-file-status" class="form-text mb-1"></div>
                                 <div class="editor-wrapper">
                                     <textarea id="content"></textarea>
                                 </div>
@@ -574,8 +588,63 @@
                 }
             }
         });
+
+        // ── File Upload ──────────────────────────────────────────────
+        async function uploadFile(file, statusEl) {
+            if (file.size > 10 * 1024 * 1024) {
+                statusEl.textContent = 'File too large (max 10 MB)';
+                statusEl.className = 'form-text text-danger';
+                return null;
+            }
+            statusEl.textContent = 'Uploading...';
+            statusEl.className = 'form-text text-muted';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+                const result = await resp.json();
+                if (!resp.ok) throw new Error(result.error || resp.statusText);
+                statusEl.textContent = 'Uploaded: ' + result.filename;
+                statusEl.className = 'form-text text-success';
+                return result;
+            } catch (e) {
+                statusEl.textContent = 'Upload failed: ' + e.message;
+                statusEl.className = 'form-text text-danger';
+                return null;
+            }
+        }
+
+        document.getElementById('upload-img-btn').addEventListener('click', () => {
+            document.getElementById('upload-img-input').click();
+        });
+
+        document.getElementById('upload-img-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const result = await uploadFile(file, document.getElementById('upload-img-status'));
+            if (result) document.getElementById('img').value = result.url;
+            e.target.value = '';
+        });
+
+        document.getElementById('insert-file-btn').addEventListener('click', () => {
+            document.getElementById('insert-file-input').click();
+        });
+
+        document.getElementById('insert-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const result = await uploadFile(file, document.getElementById('insert-file-status'));
+            if (result) {
+                const isImage = result.contentType.startsWith('image/');
+                const md = isImage ? `![${result.filename}](${result.url})` : `[${result.filename}](${result.url})`;
+                const cm = easyMDE.codemirror;
+                cm.replaceRange(md, cm.getCursor());
+                cm.focus();
+            }
+            e.target.value = '';
+        });
     </script>
-    
+
     {{codeBeforBody}}
 </body>
 </html>

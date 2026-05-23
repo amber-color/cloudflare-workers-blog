@@ -275,9 +275,18 @@
                     <label for="img" class="form-label">
                         <i class="ri-image-line"></i>Featured Image URL
                     </label>
-                    <input type="url" id="img" 
-                           class="form-input w-full"
-                           placeholder="https://example.com/image.jpg">
+                    <div class="flex gap-2">
+                        <input type="url" id="img"
+                               class="form-input flex-1 min-w-0"
+                               placeholder="https://example.com/image.jpg">
+                        <button type="button" id="upload-img-btn"
+                                class="btn-primary text-white px-4 py-2.5 rounded-xl font-medium whitespace-nowrap"
+                                title="Upload image from local">
+                            <i class="ri-upload-2-line"></i>
+                        </button>
+                    </div>
+                    <input type="file" id="upload-img-input" accept="image/*" style="display:none">
+                    <p id="upload-img-status" class="text-xs mt-1 text-gray-500"></p>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -301,9 +310,18 @@
                 </div>
                 
                 <div class="mb-8">
-                    <label for="content" class="form-label mb-3">
-                        <i class="ri-file-text-line"></i>Content *
-                    </label>
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="content" class="form-label">
+                            <i class="ri-file-text-line"></i>Content *
+                        </label>
+                        <button type="button" id="insert-file-btn"
+                                class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1"
+                                title="Upload a file and insert link into editor">
+                            <i class="ri-attachment-line"></i> Insert File
+                        </button>
+                    </div>
+                    <input type="file" id="insert-file-input" accept="*/*" style="display:none">
+                    <p id="insert-file-status" class="text-xs mb-2 text-gray-500"></p>
                     <textarea id="content"></textarea>
                 </div>
                 
@@ -528,8 +546,63 @@
                 }, 500);
             }, 3000);
         }
+
+        // ── File Upload ──────────────────────────────────────────────
+        async function uploadFile(file, statusEl) {
+            if (file.size > 10 * 1024 * 1024) {
+                statusEl.textContent = 'File too large (max 10 MB)';
+                statusEl.style.color = '#ef4444';
+                return null;
+            }
+            statusEl.textContent = 'Uploading...';
+            statusEl.style.color = '';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+                const result = await resp.json();
+                if (!resp.ok) throw new Error(result.error || resp.statusText);
+                statusEl.textContent = 'Uploaded: ' + result.filename;
+                statusEl.style.color = '#22c55e';
+                return result;
+            } catch (e) {
+                statusEl.textContent = 'Upload failed: ' + e.message;
+                statusEl.style.color = '#ef4444';
+                return null;
+            }
+        }
+
+        document.getElementById('upload-img-btn').addEventListener('click', () => {
+            document.getElementById('upload-img-input').click();
+        });
+
+        document.getElementById('upload-img-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const result = await uploadFile(file, document.getElementById('upload-img-status'));
+            if (result) document.getElementById('img').value = result.url;
+            e.target.value = '';
+        });
+
+        document.getElementById('insert-file-btn').addEventListener('click', () => {
+            document.getElementById('insert-file-input').click();
+        });
+
+        document.getElementById('insert-file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const result = await uploadFile(file, document.getElementById('insert-file-status'));
+            if (result) {
+                const isImage = result.contentType.startsWith('image/');
+                const md = isImage ? `![${result.filename}](${result.url})` : `[${result.filename}](${result.url})`;
+                const cm = easyMDE.codemirror;
+                cm.replaceRange(md, cm.getCursor());
+                cm.focus();
+            }
+            e.target.value = '';
+        });
     </script>
-    
+
     {{codeBeforBody}}
 </body>
 </html>

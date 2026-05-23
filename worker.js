@@ -226,6 +226,21 @@ class Blog {
         return Date.now().toString(36) + Math.random().toString(36).substr(2);
     }
 
+    async saveMedia({ filename, contentType, data, size }) {
+        const id = this.generateId();
+        const record = { id, filename, contentType, data, size, uploadedAt: new Date().toISOString() };
+        await this.put(`MEDIA_${id}`, record);
+        const index = await this.get('MEDIA_INDEX', true) || [];
+        const { data: _d, ...meta } = record;
+        index.unshift(meta);
+        await this.put('MEDIA_INDEX', index);
+        return id;
+    }
+
+    async getMedia(id) {
+        return await this.get(`MEDIA_${id}`, true);
+    }
+
     /**
      * List all articles with caching
      * @returns {Promise<Array>} - Array of articles
@@ -689,7 +704,7 @@ export default {
         }
 
         // Check authentication for admin routes
-        if (path.startsWith('/admin') || path.startsWith('/api/admins')) {
+        if (path.startsWith('/admin') || path.startsWith('/api/admins') || path === '/api/upload') {
             const authenticated = await isAuthenticated(request);
             if (!authenticated) {
                 return new Response('Authentication required', {
@@ -704,6 +719,23 @@ export default {
 
         if (path.startsWith('/api/')) {
             return handleAPI(request, path);
+        }
+
+        if (path.startsWith('/media/')) {
+            const id = path.slice(7);
+            if (!id) return new Response('Not found', { status: 404 });
+            const media = await blog.getMedia(id);
+            if (!media) return new Response('Not found', { status: 404 });
+            const binaryStr = atob(media.data);
+            const bytes = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+            return new Response(bytes.buffer, {
+                headers: {
+                    'Content-Type': media.contentType,
+                    'Cache-Control': 'public, max-age=31536000, immutable',
+                    'Content-Disposition': `inline; filename="${media.filename}"`
+                }
+            });
         }
 
         switch (path) {
@@ -1044,6 +1076,26 @@ export default {
                         total: index.length,
                         systemIndexNum: await blog.get('SYSTEM_INDEX_NUM')
                     });
+                }
+
+                if (path === '/api/upload' && method === 'POST') {
+                    const formData = await request.formData();
+                    const file = formData.get('file');
+                    if (!file || typeof file === 'string') {
+                        return jsonResponse({ error: 'No file provided' }, 400);
+                    }
+                    const MAX_BYTES = 10 * 1024 * 1024;
+                    if (file.size > MAX_BYTES) {
+                        return jsonResponse({ error: 'File exceeds 10 MB limit' }, 413);
+                    }
+                    const arrayBuffer = await file.arrayBuffer();
+                    const bytes = new Uint8Array(arrayBuffer);
+                    let binary = '';
+                    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+                    const base64Data = btoa(binary);
+                    const contentType = file.type || 'application/octet-stream';
+                    const id = await blog.saveMedia({ filename: file.name, contentType, data: base64Data, size: file.size });
+                    return jsonResponse({ success: true, id, url: `/media/${id}`, filename: file.name, contentType });
                 }
 
                 return jsonResponse({ error: 'Not found' }, 404);
