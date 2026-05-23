@@ -1,4 +1,4 @@
-name = "cf-blog"
+name = "cloudflare-workers-blog"
 main = "worker.js"
 compatibility_date = "2024-04-01"
 
