@@ -190,6 +190,7 @@
             border: 1px solid #e5e7eb;
             border-radius: var(--border-radius);
         }
+        .toastui-editor-defaultUI-toolbar { height: auto !important; flex-wrap: wrap; }
 
         .mb-3 {
             margin-bottom: 1.25rem !important;
@@ -367,12 +368,13 @@
         let isEditing = false;
         let currentPermalink = '';
 
-        function makeToolbarBtn(emoji, tooltip, inputId) {
+        function makeToolbarBtn(svgPath, tooltip, inputId) {
             const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.title = tooltip;
-            btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:4px 8px;font-size:16px;line-height:1;';
-            btn.textContent = emoji;
+            btn.type = 'button'; btn.title = tooltip;
+            btn.style.cssText = 'background:none;border:1px solid transparent;cursor:pointer;padding:0;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:2px;vertical-align:top;';
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">' + svgPath + '</svg>';
+            btn.addEventListener('mouseover', () => { btn.style.background = '#f7f7f7'; btn.style.borderColor = '#d4d4d4'; });
+            btn.addEventListener('mouseout', () => { btn.style.background = 'none'; btn.style.borderColor = 'transparent'; });
             btn.addEventListener('mousedown', (e) => { e.preventDefault(); document.getElementById(inputId).click(); });
             return btn;
         }
@@ -388,8 +390,8 @@
                 ['ul', 'ol', 'task', 'indent', 'outdent'],
                 ['table', 'link'],
                 [
-                    { name: 'imageUpload', el: makeToolbarBtn('🖼', 'Upload Image', 'editor-img-input') },
-                    { name: 'fileAttach', el: makeToolbarBtn('📎', 'Attach File', 'editor-file-input') },
+                    { name: 'imageUpload', el: makeToolbarBtn('<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/><path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/>', 'Upload Image', 'editor-img-input') },
+                    { name: 'fileAttach', el: makeToolbarBtn('<path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/>', 'Attach File', 'editor-file-input') },
                 ],
             ],
         });
