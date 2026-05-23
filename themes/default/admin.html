@@ -573,6 +573,18 @@
                                                     </button>
                                                 </div>
                                             </div>
+                                            <div class="col-md-6">
+                                                <div class="tool-card">
+                                                    <div class="icon-wrapper" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.2));">
+                                                        <i class="fa-solid fa-key" style="color: #f59e0b;"></i>
+                                                    </div>
+                                                    <h6>Change Password</h6>
+                                                    <p>Update your admin account password</p>
+                                                    <button onclick="openChangePasswordModal()" class="btn btn-warning btn-sm w-100">
+                                                        <i class="fa-solid fa-lock me-2"></i>Change Password
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -692,6 +704,43 @@
                     </button>
                     <button type="button" class="btn btn-primary" onclick="importArticles()">
                         <i class="fa-solid fa-file-import me-1"></i>Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-key" style="color: var(--warning-color);"></i>
+                        Change Password
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Current Password</label>
+                        <input type="password" id="cp-current" class="form-control" placeholder="Enter current password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">New Password</label>
+                        <input type="password" id="cp-new" class="form-control" placeholder="Enter new password (min. 6 chars)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Confirm New Password</label>
+                        <input type="password" id="cp-confirm" class="form-control" placeholder="Confirm new password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-warning" onclick="changePassword()">
+                        <i class="fa-solid fa-lock me-1"></i>Change Password
                     </button>
                 </div>
             </div>
@@ -1042,6 +1091,53 @@ System Index: ${data.systemIndexNum}
                     setTimeout(() => alert.remove(), 150);
                 }
             }, 5000);
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('cp-current').value;
+            const newPassword = document.getElementById('cp-new').value;
+            const confirmPassword = document.getElementById('cp-confirm').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showAlert('Please fill in all fields', 'warning');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showAlert('New passwords do not match', 'danger');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showAlert('New password must be at least 6 characters', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admins/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    showAlert('Password changed successfully. Please re-login.', 'success');
+                } else {
+                    showAlert(result.error || 'Failed to change password', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error changing password', 'danger');
+            }
         }
 
         // Initialize

@@ -85,6 +85,11 @@
                                                 <h6>Import</h6>
                                                 <button onclick="openImportModal()" class="btn btn-primary btn-sm w-100">Import</button>
                                             </div>
+                                            <div class="col-6 text-center">
+                                                <i class="bi bi-key display-6 text-warning mb-2"></i>
+                                                <h6>Password</h6>
+                                                <button onclick="openChangePasswordModal()" class="btn btn-warning btn-sm w-100">Change</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -102,6 +107,32 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Current Password</label>
+                        <input type="password" id="cp-current" class="form-control" placeholder="Enter current password">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">New Password</label>
+                        <input type="password" id="cp-new" class="form-control" placeholder="Enter new password (min. 6 chars)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Confirm New Password</label>
+                        <input type="password" id="cp-confirm" class="form-control" placeholder="Confirm new password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="changePassword()"><i class="bi bi-lock me-1"></i>Change Password</button>
                 </div>
             </div>
         </div>
@@ -174,6 +205,34 @@
         }
 
         function openImportModal() { new bootstrap.Modal(document.getElementById('importModal')).show(); }
+
+        function openChangePasswordModal() {
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            new bootstrap.Modal(document.getElementById('changePasswordModal')).show();
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('cp-current').value;
+            const newPassword = document.getElementById('cp-new').value;
+            const confirmPassword = document.getElementById('cp-confirm').value;
+            if (!currentPassword || !newPassword || !confirmPassword) { showAlert('Please fill in all fields', 'warning'); return; }
+            if (newPassword !== confirmPassword) { showAlert('New passwords do not match', 'danger'); return; }
+            if (newPassword.length < 6) { showAlert('New password must be at least 6 characters', 'warning'); return; }
+            try {
+                const response = await fetch('/api/admins/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });
+                const result = await response.json();
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    showAlert('Password changed successfully. Please re-login.', 'success');
+                } else {
+                    showAlert(result.error || 'Failed to change password', 'danger');
+                }
+            } catch (error) {
+                showAlert('Error changing password', 'danger');
+            }
+        }
 
         async function importArticles() {
             const file = document.getElementById('importFile').files[0];

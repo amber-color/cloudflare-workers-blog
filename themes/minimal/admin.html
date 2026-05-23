@@ -296,6 +296,14 @@
                 <h3 class="font-semibold text-gray-800 text-sm md:text-base">Import</h3>
                 <p class="text-xs text-gray-500 mt-1 hidden sm:block">Restore data</p>
             </button>
+
+            <button onclick="openChangePasswordModal()" class="action-card p-5 text-center group">
+                <div class="icon-wrapper bg-gradient-to-br from-pastel-peach to-pastel-cream mx-auto mb-3">
+                    <i class="ri-lock-password-line text-2xl text-orange-500"></i>
+                </div>
+                <h3 class="font-semibold text-gray-800 text-sm md:text-base">Password</h3>
+                <p class="text-xs text-gray-500 mt-1 hidden sm:block">Change password</p>
+            </button>
         </div>
 
         <!-- Articles Management -->
@@ -452,6 +460,47 @@
                 </button>
                 <button onclick="importArticles()" class="flex-1 btn-secondary text-white py-3 px-4 rounded-xl font-medium">
                     <i class="ri-upload-2-line mr-2"></i>Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="change-password-modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+        <div class="glass-modal p-6 w-full max-w-md shadow-2xl">
+            <div class="flex justify-between items-center mb-5">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pastel-peach to-pastel-cream flex items-center justify-center">
+                        <i class="ri-lock-password-line text-orange-500"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800">Change Password</h3>
+                </div>
+                <button onclick="closeChangePasswordModal()" class="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="ri-close-line text-gray-600"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 mb-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                    <input type="password" id="cp-current" placeholder="Enter current password" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-all bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                    <input type="password" id="cp-new" placeholder="Enter new password (min. 6 chars)" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-all bg-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                    <input type="password" id="cp-confirm" placeholder="Confirm new password" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-all bg-white">
+                </div>
+            </div>
+
+            <div class="flex space-x-3">
+                <button onclick="closeChangePasswordModal()" class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-xl font-medium hover:bg-gray-200 transition-all">
+                    Cancel
+                </button>
+                <button onclick="changePassword()" class="flex-1 bg-gradient-to-br from-orange-400 to-amber-500 text-white py-3 px-4 rounded-xl font-medium hover:shadow-lg transition-all">
+                    <i class="ri-lock-password-line mr-2"></i>Change Password
                 </button>
             </div>
         </div>
@@ -862,6 +911,57 @@
                     }
                 }, 500);
             }, 3000);
+        }
+
+        function openChangePasswordModal() {
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            document.getElementById('change-password-modal').classList.remove('hidden');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('change-password-modal').classList.add('hidden');
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('cp-current').value;
+            const newPassword = document.getElementById('cp-new').value;
+            const confirmPassword = document.getElementById('cp-confirm').value;
+
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showNotification('Please fill in all fields', 'warning');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showNotification('New passwords do not match', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showNotification('New password must be at least 6 characters', 'warning');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admins/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showNotification('Password changed successfully. Please re-login.', 'success');
+                    closeChangePasswordModal();
+                } else {
+                    showNotification(result.error || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showNotification('Error changing password', 'error');
+            }
         }
 
         // Load published articles by default

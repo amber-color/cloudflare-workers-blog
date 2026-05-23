@@ -856,6 +856,38 @@ export default {
                     return jsonResponse({ success: true });
                 }
 
+                if (path === '/api/admins/change-password' && method === 'POST') {
+                    const credentials = authenticate(request);
+                    if (!credentials) {
+                        return jsonResponse({ error: 'Authentication required' }, 401);
+                    }
+
+                    const [username, currentPassword] = credentials;
+                    const currentAdmin = await blog.verifyAdmin(username, currentPassword);
+                    if (!currentAdmin) {
+                        return jsonResponse({ error: 'Authentication failed' }, 401);
+                    }
+
+                    const { currentPassword: bodyCurrentPassword, newPassword } = await request.json();
+
+                    if (!bodyCurrentPassword || !newPassword) {
+                        return jsonResponse({ error: 'Current password and new password are required' }, 400);
+                    }
+
+                    if (currentAdmin.password !== bodyCurrentPassword) {
+                        return jsonResponse({ error: 'Current password is incorrect' }, 400);
+                    }
+
+                    if (newPassword.length < 6) {
+                        return jsonResponse({ error: 'New password must be at least 6 characters' }, 400);
+                    }
+
+                    const updatedAdmin = { ...currentAdmin, password: newPassword };
+                    await blog.saveAdmin(updatedAdmin);
+
+                    return jsonResponse({ success: true, message: 'Password changed successfully' });
+                }
+
                 // Articles API (existing endpoints)
                 if (path === '/api/articles' && method === 'GET') {
                     const showDrafts = url.searchParams.get('drafts') === 'true';
