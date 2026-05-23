@@ -564,27 +564,27 @@ class Blog {
      */
     async fetchThemeTemplate(templateName) {
         const cacheKey = `${OPT.themeURL}${templateName}`;
-        
-        if (this.themeCache.has(cacheKey)) {
-            return this.themeCache.get(cacheKey);
+        const CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+        const cached = this.themeCache.get(cacheKey);
+        if (cached && (Date.now() - cached.ts) < CACHE_TTL_MS) {
+            return cached.html;
         }
 
         try {
             const response = await fetch(`${OPT.themeURL}${templateName}.html`, {
-                cf: {
-                    cacheTtl: 300
-                }
+                cf: { cacheTtl: 0, cacheEverything: false }
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: Failed to fetch template`);
             }
-            
-            const template = await response.text();
-            
-            this.themeCache.set(cacheKey, template);
-            
-            return template;
+
+            const html = await response.text();
+
+            this.themeCache.set(cacheKey, { html, ts: Date.now() });
+
+            return html;
         } catch (error) {
             console.error(`Error fetching template ${templateName}:`, error);
             throw new Error(`Failed to fetch template: ${templateName}`);
