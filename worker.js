@@ -3377,6 +3377,19 @@ System Index: \${data.systemIndexNum}
             return btn;
         }
 
+        // Patch offsetWidth so TUI Editor always thinks the toolbar is wide enough.
+        // This prevents the overflow/More button logic from ever triggering.
+        const _origOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+            configurable: true,
+            get() {
+                if (this.classList && this.classList.contains('toastui-editor-defaultUI-toolbar')) {
+                    return 9999;
+                }
+                return _origOffsetWidth.get.call(this);
+            }
+        });
+
         editor = new toastui.Editor({
             el: document.getElementById('content-editor'),
             initialEditType: 'wysiwyg',
@@ -3393,29 +3406,6 @@ System Index: \${data.systemIndexNum}
                 ],
             ],
         });
-
-        // Force all toolbar groups visible, hide the "more" button.
-        // TUI Editor moves overflow groups into a popup outside the toolbar DOM,
-        // so we search document-wide and move them back into the toolbar.
-        function expandToolbar() {
-            const toolbar = document.querySelector('.toastui-editor-defaultUI-toolbar');
-            if (!toolbar) return;
-            const allGroups = Array.from(document.querySelectorAll('.toastui-editor-toolbar-group'));
-            const moreGroup = allGroups.find(g => !!g.querySelector('.toastui-editor-toolbar-icons.more'));
-            allGroups.forEach(g => {
-                if (g === moreGroup) {
-                    g.style.setProperty('display', 'none', 'important');
-                } else {
-                    if (!toolbar.contains(g)) toolbar.appendChild(g);
-                    g.style.setProperty('display', 'inline-flex', 'important');
-                }
-            });
-        }
-        // Run at multiple delays to catch TUI Editor's async layout phases
-        setTimeout(expandToolbar, 0);
-        setTimeout(expandToolbar, 100);
-        setTimeout(expandToolbar, 300);
-        window.addEventListener('resize', () => setTimeout(expandToolbar, 50));
 
         // Check if editing existing article
         const urlParams = new URLSearchParams(window.location.search);
