@@ -572,9 +572,7 @@ class Blog {
         }
 
         try {
-            const response = await fetch(`${OPT.themeURL}${templateName}.html`, {
-                cache: 'no-store'
-            });
+            const response = await fetch(`${OPT.themeURL}${templateName}.html`);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: Failed to fetch template`);
