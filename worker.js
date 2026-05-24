@@ -3168,9 +3168,7 @@ System Index: \${data.systemIndexNum}
             flex-wrap: wrap !important;
             overflow: visible !important;
         }
-        .toastui-editor-toolbar-more-btn { display: none !important; }
         .toastui-editor-toolbar-group {
-            display: inline-flex !important;
             flex-wrap: wrap;
         }
         
@@ -3395,6 +3393,18 @@ System Index: \${data.systemIndexNum}
                 ],
             ],
         });
+
+        // Force all toolbar groups visible, hide the "more" button
+        function expandToolbar() {
+            const toolbar = document.querySelector('.toastui-editor-defaultUI-toolbar');
+            if (!toolbar) return;
+            toolbar.querySelectorAll('.toastui-editor-toolbar-group').forEach(g => {
+                const isMoreGroup = !!g.querySelector('.toastui-editor-toolbar-icons.more');
+                g.style.setProperty('display', isMoreGroup ? 'none' : 'inline-flex', 'important');
+            });
+        }
+        setTimeout(expandToolbar, 0);
+        window.addEventListener('resize', expandToolbar);
 
         // Check if editing existing article
         const urlParams = new URLSearchParams(window.location.search);
