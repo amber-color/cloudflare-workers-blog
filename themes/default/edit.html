@@ -203,7 +203,16 @@
             border: 1px solid var(--card-border);
             border-radius: var(--border-radius);
         }
-        .toastui-editor-defaultUI-toolbar { height: auto !important; flex-wrap: wrap; }
+        .toastui-editor-defaultUI-toolbar {
+            height: auto !important;
+            flex-wrap: wrap !important;
+            overflow: visible !important;
+        }
+        .toastui-editor-toolbar-more-btn { display: none !important; }
+        .toastui-editor-toolbar-group {
+            display: inline-flex !important;
+            flex-wrap: wrap;
+        }
         
         @media (max-width: 768px) {
             .sidebar {
