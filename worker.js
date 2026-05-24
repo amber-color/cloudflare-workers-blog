@@ -3171,6 +3171,28 @@ System Index: \${data.systemIndexNum}
         .toastui-editor-toolbar-group {
             flex-wrap: wrap;
         }
+        /* Hide the "More" overflow button */
+        .toastui-editor-toolbar-icons.more {
+            display: none !important;
+        }
+        /* Force overflow popup always visible and inline (no popup behavior) */
+        .toastui-editor-toolbar-popup-wrap {
+            position: static !important;
+            display: block !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+            width: auto !important;
+        }
+        .toastui-editor-toolbar-popup {
+            position: static !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            padding: 0 5px 2px !important;
+            box-shadow: none !important;
+            border: none !important;
+            background: transparent !important;
+        }
         
         @media (max-width: 768px) {
             .sidebar {
@@ -3377,18 +3399,16 @@ System Index: \${data.systemIndexNum}
             return btn;
         }
 
-        // Patch offsetWidth so TUI Editor always thinks the toolbar is wide enough.
-        // This prevents the overflow/More button logic from ever triggering.
-        const _origOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
-            configurable: true,
-            get() {
-                if (this.classList && this.classList.contains('toastui-editor-defaultUI-toolbar')) {
-                    return 9999;
-                }
-                return _origOffsetWidth.get.call(this);
-            }
-        });
+        // Remove any "More" button group that TUI Editor inserts for overflow items.
+        // The overflow popup is forced always-visible via CSS, so we only need to
+        // hide the trigger button group itself.
+        function removeMoreButtonGroup() {
+            document.querySelectorAll('.toastui-editor-toolbar-icons.more').forEach(btn => {
+                const group = btn.closest('.toastui-editor-toolbar-group');
+                if (group) group.style.display = 'none';
+            });
+        }
+        const toolbarObserver = new MutationObserver(removeMoreButtonGroup);
 
         editor = new toastui.Editor({
             el: document.getElementById('content-editor'),
@@ -3406,6 +3426,11 @@ System Index: \${data.systemIndexNum}
                 ],
             ],
         });
+
+        // Start observing for More button after editor init
+        const editorEl = document.getElementById('content-editor');
+        toolbarObserver.observe(editorEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+        removeMoreButtonGroup();
 
         // Check if editing existing article
         const urlParams = new URLSearchParams(window.location.search);
