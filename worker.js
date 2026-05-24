@@ -573,7 +573,7 @@ class Blog {
 
         try {
             const response = await fetch(`${OPT.themeURL}${templateName}.html`, {
-                cf: { cacheTtl: 0, cacheEverything: false }
+                cache: 'no-store'
             });
 
             if (!response.ok) {
@@ -1228,7 +1228,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading template: ' + error.message, { status: 500 });
@@ -1247,7 +1247,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading template: ' + error.message, { status: 500 });
@@ -1266,7 +1266,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading admin users template', { status: 500 });
@@ -1290,7 +1290,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading template: ' + error.message, { status: 500 });
@@ -1309,7 +1309,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading bookmarks page', { status: 500 });
@@ -1347,7 +1347,7 @@ export default {
                 
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('Error loading template: ' + error.message, { status: 500 });
@@ -1367,7 +1367,7 @@ export default {
                 const html = blog.renderTemplate(template, data);
                 return new Response(html, {
                     status: 404,
-                    headers: { 'Content-Type': 'text/html' }
+                    headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' }
                 });
             } catch (error) {
                 return new Response('404 - Page Not Found', {
