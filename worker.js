@@ -11,7 +11,7 @@ const OPT = {
     "recentlySize": 6,
     "readMoreLength": 150,
     "cacheTime": 60 * 60 * 24 * 0.5,
-    "themeURL": "https://raw.githubusercontent.com/amber-color/cloudflare-workers-blog/main/themes/minimal/",
+    "themeURL": "https://raw.githubusercontent.com/amber-color/cloudflare-workers-blog/main/themes/default/",
     "html404": ``,
     "codeBeforHead": ``,
     "codeBeforBody": ``,
